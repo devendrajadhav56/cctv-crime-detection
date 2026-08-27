@@ -1,0 +1,16 @@
+# Local Windows paths to the UCF-Crime subset already on disk.
+# On GB10, point these at the copied Fighting / Testing_Normal folders.
+sources:
+  fight: "C:/Users/devendra.jadhav/Downloads/Anomaly-Videos-Part-2/Anomaly-Videos-Part-2/Fighting"
+  normal: "C:/Users/devendra.jadhav/Downloads/Testing_Normal_Videos/Testing_Normal_Videos_Anomaly"
+
+clip:
+  length_sec: 4.0
+  stride_sec: 2.0
+
+split:
+  val_ratio: 0.2
+  seed: 42
+
+output:
+  manifests_dir: data/manifests
