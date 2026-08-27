@@ -10,6 +10,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "data.yaml"
+DEFAULT_INFER_CONFIG = REPO_ROOT / "configs" / "infer.yaml"
 
 
 @dataclass(frozen=True)
@@ -63,4 +64,32 @@ def load_config(path: Path | None = None) -> DataConfig:
         split=split,
         manifests_dir=manifests_dir,
         repo_root=REPO_ROOT,
+    )
+
+
+@dataclass(frozen=True)
+class InferConfig:
+    model_name: str
+    frames_per_clip: int
+    prompts: dict[str, str]
+    labels: tuple[str, ...]
+    clip: ClipConfig
+
+
+def load_infer_config(path: Path | None = None) -> InferConfig:
+    config_path = Path(path) if path is not None else DEFAULT_INFER_CONFIG
+    raw: dict[str, Any] = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    prompts = {str(key): str(value) for key, value in raw["prompts"].items()}
+    labels = tuple(prompts.keys())
+    if not labels:
+        raise ValueError("infer.yaml prompts must include at least one label")
+    return InferConfig(
+        model_name=str(raw["model"]["name"]),
+        frames_per_clip=int(raw["model"]["frames_per_clip"]),
+        prompts=prompts,
+        labels=labels,
+        clip=ClipConfig(
+            length_sec=float(raw["clip"]["length_sec"]),
+            stride_sec=float(raw["clip"]["stride_sec"]),
+        ),
     )

@@ -1,0 +1,12 @@
+model:
+  name: microsoft/xclip-base-patch32
+  frames_per_clip: 8
+
+# Label keys are fight / normal to match Phase 1. Order is softmax class order.
+prompts:
+  fight: "a CCTV video of people fighting"
+  normal: "a CCTV video of normal activity"
+
+clip:
+  length_sec: 4.0
+  stride_sec: 2.0

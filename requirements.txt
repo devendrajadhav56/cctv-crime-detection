@@ -1,4 +1,5 @@
-# Phase 1: dataset indexing. CPU PyTorch is enough on Windows.
+# Phase 1–2: dataset indexing and offline zero-shot inference.
+# CPU PyTorch is enough on Windows for --dry-run and env checks.
 # On the GB10 box (aarch64, CUDA 13.0), install torch from the official
 # CUDA wheel index instead of reusing a Windows/x86 wheel. See README.
 torch>=2.2.0
@@ -6,3 +7,5 @@ opencv-python>=4.9.0
 PyYAML>=6.0
 pandas>=2.0.0
 tqdm>=4.66.0
+transformers>=4.40.0
+Pillow>=10.0.0

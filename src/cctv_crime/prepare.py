@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from cctv_crime.config import DataConfig
 from cctv_crime.probe import probe_video
+from cctv_crime.windows import clip_windows
 
 VIDEO_EXTS = {".mp4"}
 
@@ -46,19 +47,6 @@ def assign_splits(
         for index in indices[:n_val]:
             splits[index] = "val"
     return splits
-
-
-def clip_windows(duration_sec: float, length_sec: float, stride_sec: float) -> list[tuple[float, float]]:
-    """Non-overlapping-tail sliding windows. Drop the last window if it is shorter than length."""
-    if length_sec <= 0 or stride_sec <= 0:
-        raise ValueError("clip length and stride must be positive")
-    windows: list[tuple[float, float]] = []
-    start = 0.0
-    # Allow a tiny float tolerance so duration == length still yields one clip.
-    while start + length_sec <= duration_sec + 1e-9:
-        windows.append((start, start + length_sec))
-        start += stride_sec
-    return windows
 
 
 def prepare_dataset(config: DataConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
