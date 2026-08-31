@@ -12,3 +12,4 @@ Pillow>=10.0.0
 fastapi>=0.115.0
 uvicorn>=0.30.0
 python-multipart>=0.0.9
+imageio-ffmpeg>=0.5.1

@@ -142,14 +142,21 @@ async function pollJob(jobId) {
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   const videoResponse = await fetch(jobUrl(job.video_url));
   if (!videoResponse.ok) throw new Error("Could not download labelled video.");
-  objectUrl = URL.createObjectURL(await videoResponse.blob());
+  const blob = await videoResponse.blob();
+  objectUrl = URL.createObjectURL(new Blob([blob], { type: "video/mp4" }));
   els.drop.hidden = true;
   els.player.hidden = false;
   els.player.src = objectUrl;
+  els.player.load();
   els.download.hidden = false;
   els.download.href = objectUrl;
   els.download.download = "labelled.mp4";
   els.badge.hidden = false;
+  try {
+    await els.player.play();
+  } catch {
+    // Autoplay can be blocked; controls still work.
+  }
 }
 
 async function upload(file) {
@@ -197,6 +204,9 @@ els.drop.addEventListener("drop", (event) => {
   takeFile(event.dataTransfer.files[0]);
 });
 els.player.addEventListener("timeupdate", updateBadge);
+els.player.addEventListener("error", () => {
+  showError("The browser could not decode the labelled file. Restart the GB10 server on the latest code (H.264) and run the job again.");
+});
 
 ping();
 setInterval(ping, 5000);

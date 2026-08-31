@@ -147,13 +147,22 @@ h2 {
   box-shadow: var(--shadow);
 }
 
+.drop[hidden],
+.player[hidden],
+.badge[hidden],
+.progress-wrap[hidden],
+.error[hidden],
+.btn-ghost[hidden] {
+  display: none !important;
+}
+
 .frame {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 4 / 3;
   margin: 16px;
   border-radius: 12px;
   overflow: hidden;
-  background: #05070a;
+  background: #161b22;
 }
 
 .corners::before,
@@ -215,8 +224,9 @@ h2 {
 }
 
 .player {
-  background: #000;
+  background: #161b22;
   object-fit: contain;
+  z-index: 1;
 }
 
 .badge {

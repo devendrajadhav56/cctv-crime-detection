@@ -78,26 +78,26 @@ def draw_hud(frame: np.ndarray, display_label: str, confidence: float, time_sec:
     return out
 
 
-def _encode_h264(source: Path, dest: Path) -> bool:
-    ffmpeg = shutil.which("ffmpeg")
-    if ffmpeg is None:
-        return False
-    command = [
-        ffmpeg,
-        "-y",
-        "-i",
-        str(source),
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-movflags",
-        "+faststart",
-        "-an",
-        str(dest),
-    ]
-    completed = subprocess.run(command, capture_output=True, check=False)
-    return completed.returncode == 0 and dest.is_file()
+def _even(value: int) -> int:
+    return value if value % 2 == 0 else value + 1
+
+
+def _ffmpeg_exe() -> str | None:
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    try:
+        import imageio_ffmpeg
+
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
+
+
+def _resize(frame: np.ndarray, width: int, height: int) -> np.ndarray:
+    if frame.shape[1] == width and frame.shape[0] == height:
+        return frame
+    return cv2.resize(frame, (width, height), interpolation=cv2.INTER_LINEAR)
 
 
 def render_labelled_video(
@@ -107,40 +107,87 @@ def render_labelled_video(
     *,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
+    """Write an H.264 MP4 Chrome can play. OpenCV mp4v is not a browser codec."""
     info = probe_video(source)
     capture = cv2.VideoCapture(str(source))
     if not capture.isOpened():
         raise RuntimeError(f"Could not open video: {source}")
 
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    raw_path = dest.with_name(dest.stem + "_raw.mp4")
-    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
-    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(str(raw_path), fourcc, info.fps, (width, height))
-    if not writer.isOpened():
+    ok, first = capture.read()
+    if not ok or first is None:
         capture.release()
-        raise RuntimeError(f"Could not write video: {raw_path}")
+        raise RuntimeError(f"Could not read frames from {source}")
+
+    height, width = first.shape[:2]
+    width, height = _even(width), _even(height)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    ffmpeg = _ffmpeg_exe()
+    if ffmpeg is None:
+        capture.release()
+        raise RuntimeError(
+            "ffmpeg not found. Install ffmpeg on the GB10 box or pip install imageio-ffmpeg "
+            "so labelled videos are H.264 (browsers cannot play OpenCV mp4v)."
+        )
+
+    command = [
+        ffmpeg,
+        "-y",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "bgr24",
+        "-s",
+        f"{width}x{height}",
+        "-r",
+        str(info.fps),
+        "-i",
+        "pipe:0",
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(dest),
+    ]
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    assert process.stdin is not None
+
+    def push(frame: np.ndarray, frame_index: int) -> None:
+        time_sec = frame_index / info.fps
+        display_label, confidence = label_at_time(time_sec, results)
+        labelled = _resize(draw_hud(frame, display_label, confidence, time_sec), width, height)
+        process.stdin.write(np.ascontiguousarray(labelled).tobytes())
+        if progress_callback is not None and info.n_frames:
+            progress_callback(frame_index + 1, info.n_frames)
 
     try:
-        frame_index = 0
+        push(first, 0)
+        frame_index = 1
         while True:
             ok, frame = capture.read()
             if not ok or frame is None:
                 break
-            time_sec = frame_index / info.fps
-            display_label, confidence = label_at_time(time_sec, results)
-            writer.write(draw_hud(frame, display_label, confidence, time_sec))
+            push(frame, frame_index)
             frame_index += 1
-            if progress_callback is not None and info.n_frames:
-                progress_callback(frame_index, info.n_frames)
+        process.stdin.close()
+        stderr = process.communicate(timeout=600)[1]
+    except Exception:
+        process.kill()
+        capture.release()
+        raise
     finally:
-        writer.release()
         capture.release()
 
-    if _encode_h264(raw_path, dest):
-        raw_path.unlink(missing_ok=True)
-        return dest
-
-    raw_path.replace(dest)
+    if process.returncode != 0 or not dest.is_file() or dest.stat().st_size == 0:
+        detail = (stderr or b"").decode("utf-8", "replace")[-800:]
+        raise RuntimeError(f"H.264 encode failed (need libx264). ffmpeg said:\n{detail}")
     return dest
