@@ -1,3 +1,13 @@
+# Scoring backend: "xclip" (zero-shot, prompt-based) or "vadclip" (weakly-
+# supervised, trained on UCF-Crime's 14 anomaly classes — see vadclip below).
+backend: xclip
+
+# Only read when backend: vadclip. checkpoint_path is the CLIPVAD state
+# dict (model_ucf.pth) from the vadclip-ucf-crime reproduction; frames_per_clip
+# frames sampled per window become that window's VadCLIP snippet sequence.
+vadclip:
+  checkpoint_path: data/vadclip/model_ucf.pth
+
 model:
   # 16-frame checkpoint; base-patch32 only accepts 8 frames.
   name: microsoft/xclip-base-patch16-16-frames

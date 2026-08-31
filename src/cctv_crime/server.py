@@ -97,9 +97,9 @@ def create_app(*, dry_run: bool = False, config: InferConfig | None = None) -> F
     async def lifespan(_app: FastAPI):
         JOBS_DIR.mkdir(parents=True, exist_ok=True)
         if not dry_run:
-            from cctv_crime.model import ZeroShotClipClassifier
+            from cctv_crime.model import build_classifier
 
-            state["classifier"] = ZeroShotClipClassifier(infer_config)
+            state["classifier"] = build_classifier(infer_config)
         yield
 
     app = FastAPI(title="CCTV Crime Detection", version="0.3.0", lifespan=lifespan)
@@ -179,7 +179,8 @@ def create_app(*, dry_run: bool = False, config: InferConfig | None = None) -> F
             "dry_run": dry_run,
             "cuda": torch.cuda.is_available(),
             "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
-            "model": infer_config.model_name,
+            "backend": infer_config.backend,
+            "model": infer_config.model_name if infer_config.backend == "xclip" else str(infer_config.vadclip_checkpoint),
             "model_loaded": state["classifier"] is not None or dry_run,
         }
 

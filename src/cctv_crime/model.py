@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import torch
 from PIL import Image
@@ -16,6 +17,7 @@ class ClipPrediction:
     label: str
     confidence: float
     probabilities: dict[str, float]
+    top_class: str | None = None
 
 
 class ZeroShotClipClassifier:
@@ -58,3 +60,14 @@ class ZeroShotClipClassifier:
             confidence=probabilities[best],
             probabilities=probabilities,
         )
+
+
+def build_classifier(config: InferConfig, device: str | None = None) -> Any:
+    """Instantiate the configured scoring backend (config.backend: "xclip" | "vadclip")."""
+    if config.backend == "vadclip":
+        from cctv_crime.vadclip_classifier import VadClipClassifier
+
+        return VadClipClassifier(config, device=device)
+    if config.backend == "xclip":
+        return ZeroShotClipClassifier(config, device=device)
+    raise ValueError(f"Unknown backend: {config.backend!r} (expected 'xclip' or 'vadclip')")

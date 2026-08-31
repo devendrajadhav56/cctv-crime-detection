@@ -24,6 +24,7 @@ class WindowResult:
     label: str | None
     confidence: float | None
     probabilities: dict[str, float] = field(default_factory=dict)
+    top_class: str | None = None
 
     @property
     def display_label(self) -> str | None:
@@ -39,6 +40,7 @@ class WindowResult:
             "display_label": self.display_label,
             "confidence": None if self.confidence is None else round(self.confidence, 4),
             "probabilities": {key: round(value, 4) for key, value in self.probabilities.items()},
+            "top_class": self.top_class,
         }
 
 
@@ -79,9 +81,9 @@ def infer_video(
         ]
 
     if classifier is None:
-        from cctv_crime.model import ZeroShotClipClassifier
+        from cctv_crime.model import build_classifier
 
-        classifier = ZeroShotClipClassifier(config)
+        classifier = build_classifier(config)
 
     from cctv_crime.frames import read_window_frames
 
@@ -104,6 +106,7 @@ def infer_video(
                 label=prediction.label,
                 confidence=prediction.confidence,
                 probabilities=dict(prediction.probabilities),
+                top_class=prediction.top_class,
             )
         )
         if progress_callback is not None:

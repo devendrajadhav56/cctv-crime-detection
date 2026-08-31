@@ -74,6 +74,8 @@ class InferConfig:
     prompts: dict[str, list[str]]
     labels: tuple[str, ...]
     clip: ClipConfig
+    backend: str = "xclip"
+    vadclip_checkpoint: Path | None = None
 
 
 def _as_prompt_list(value: Any) -> list[str]:
@@ -96,6 +98,13 @@ def load_infer_config(path: Path | None = None) -> InferConfig:
     labels = tuple(prompts.keys())
     if not labels:
         raise ValueError("infer.yaml prompts must include at least one label")
+    backend = str(raw.get("backend", "xclip"))
+    vadclip_raw = raw.get("vadclip") or {}
+    vadclip_checkpoint = (
+        _as_path(str(vadclip_raw["checkpoint_path"]), REPO_ROOT) if "checkpoint_path" in vadclip_raw else None
+    )
+    if backend == "vadclip" and vadclip_checkpoint is None:
+        raise ValueError("backend: vadclip requires vadclip.checkpoint_path in infer.yaml")
     return InferConfig(
         model_name=str(raw["model"]["name"]),
         frames_per_clip=int(raw["model"]["frames_per_clip"]),
@@ -105,4 +114,6 @@ def load_infer_config(path: Path | None = None) -> InferConfig:
             length_sec=float(raw["clip"]["length_sec"]),
             stride_sec=float(raw["clip"]["stride_sec"]),
         ),
+        backend=backend,
+        vadclip_checkpoint=vadclip_checkpoint,
     )
