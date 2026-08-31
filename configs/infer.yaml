@@ -1,11 +1,19 @@
 model:
-  name: microsoft/xclip-base-patch32
-  frames_per_clip: 8
+  # 16-frame checkpoint; base-patch32 only accepts 8 frames.
+  name: microsoft/xclip-base-patch16-16-frames
+  frames_per_clip: 16
 
-# Label keys are fight / normal to match Phase 1. Order is softmax class order.
+# Multiple prompts per class; logits are averaged then softmaxed.
+# Keep fight vs normal visually specific — avoid a shared "CCTV video of" prefix.
 prompts:
-  fight: "a CCTV video of people fighting"
-  normal: "a CCTV video of normal activity"
+  fight:
+    - "a video of people punching and kicking each other"
+    - "a video of a violent brawl, people hitting and shoving"
+    - "a video of two people grappling and fighting on the ground"
+  normal:
+    - "a video of people walking or standing calmly"
+    - "a video of pedestrians with no physical violence"
+    - "a video of everyday activity without fighting"
 
 clip:
   length_sec: 4.0

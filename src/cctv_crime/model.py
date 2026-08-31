@@ -22,7 +22,8 @@ class ZeroShotClipClassifier:
     def __init__(self, config: InferConfig, device: str | None = None) -> None:
         self.config = config
         self.labels = list(config.labels)
-        self.texts = [config.prompts[label] for label in self.labels]
+        self.prompt_lists = [config.prompts[label] for label in self.labels]
+        self.texts = [text for prompts in self.prompt_lists for text in prompts]
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device)
@@ -40,8 +41,14 @@ class ZeroShotClipClassifier:
         )
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
         with torch.inference_mode():
-            logits = self.model(**inputs).logits_per_video
-            probs = logits.softmax(dim=-1)[0]
+            prompt_logits = self.model(**inputs).logits_per_video[0]
+            class_logits = []
+            offset = 0
+            for prompts in self.prompt_lists:
+                n = len(prompts)
+                class_logits.append(prompt_logits[offset : offset + n].mean())
+                offset += n
+            probs = torch.stack(class_logits).softmax(dim=0)
         probabilities = {
             label: float(probs[index].item()) for index, label in enumerate(self.labels)
         }

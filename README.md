@@ -42,7 +42,7 @@ Each 4-second window (2-second stride, same as Phase 1) is scored as `fight` or 
 00:04-00:08  fight   0.73
 ```
 
-The scorer is HuggingFace **X-CLIP** (`microsoft/xclip-base-patch32`): 8 frames per clip compared to the prompts in `configs/infer.yaml`. This is zero-shot, not trained on UCF-Crime. Accuracy on CCTV fights will be limited until Phase 3 fine-tunes.
+The scorer is HuggingFace **X-CLIP** (`microsoft/xclip-base-patch16-16-frames`): 16 frames per clip, scored against the prompt lists in `configs/infer.yaml` (logits averaged per class). This is zero-shot, not trained on UCF-Crime. Accuracy on CCTV fights will be limited until Phase 3 fine-tunes.
 
 `--dry-run` prints window timestamps without loading the model (use this on local Windows).
 
