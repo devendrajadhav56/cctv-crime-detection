@@ -17,6 +17,7 @@ env/
 
 # Generated dataset indexes (keep the directory)
 data/manifests/*.csv
+data/jobs/
 
 # Media — videos stay outside the repo
 *.mp4

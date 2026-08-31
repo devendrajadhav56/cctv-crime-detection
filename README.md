@@ -1,6 +1,6 @@
 # CCTV crime detection
 
-Fight vs normal from a UCF-Crime subset. Phase 1 indexes videos. Phase 2 scores overlapping clips with a pretrained X-CLIP model (zero-shot, not fine-tuned). No live CCTV or alerts yet.
+Fight vs normal from a UCF-Crime subset. Phase 1 indexes videos. Phase 2 scores overlapping clips with a pretrained X-CLIP model (zero-shot, not fine-tuned). The web app sends a clip to the GB10 GPU box and returns a video with **CRIME** / **NORMAL** burned in.
 
 ## Phase 1 — Dataset index
 
@@ -79,14 +79,44 @@ python scripts/detect_event.py /path/to/Fighting002_x264.mp4
 
 Uses CUDA if `torch.cuda.is_available()`, otherwise CPU. Point `configs/data.yaml` at copied Fighting / Testing_Normal folders when you prepare manifests on the box.
 
+## App — labelled video UI
+
+The GB10 box runs the model and a small HTTP API. Open the UI from your local browser and upload a clip; it comes back with **CRIME** / **NORMAL** burned into every frame.
+
+On GB10:
+
+```bash
+pip install -r requirements.txt
+python scripts/serve.py --host 0.0.0.0 --port 8000
+```
+
+From this Windows machine, open `http://<gb10-ip>:8000`. Leave **GB10 API** empty (same origin). If you open `web/index.html` as a local file instead, paste `http://<gb10-ip>:8000` into that field.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/v1/health` | CUDA / model status |
+| POST | `/v1/jobs` | `multipart/form-data` field `video` |
+| GET | `/v1/jobs/{id}` | status, progress, window JSON |
+| GET | `/v1/jobs/{id}/video` | labelled H.264 MP4 |
+
+Fight windows are shown as **CRIME**. Local UI testing without a GPU:
+
+```bash
+python scripts/serve.py --dry-run
+```
+
+`--dry-run` skips X-CLIP and paints alternating CRIME/NORMAL bands so overlay and upload can be checked.
+
 ## Layout
 
 ```text
 configs/data.yaml
 configs/infer.yaml
-src/cctv_crime/          # config, probe, prepare, windows, frames, model, infer
+src/cctv_crime/          # config, probe, prepare, windows, frames, model, infer, overlay, server
 scripts/prepare_dataset.py
 scripts/detect_event.py
+scripts/serve.py
 scripts/check_env.py
+web/                     # UI (upload + labelled player)
 data/manifests/          # generated CSVs (gitignored)
 ```

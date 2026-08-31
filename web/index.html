@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CCTV Crime Detection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="grain"></div>
+    <header class="top">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <div>
+          <p class="kicker">Surveillance review</p>
+          <h1>Crime / Normal overlay</h1>
+        </div>
+      </div>
+      <div class="connect">
+        <label class="field">
+          <span>GB10 API</span>
+          <input id="api-url" type="url" placeholder="http://gb10-host:8000" spellcheck="false" />
+        </label>
+        <div id="health" class="pill offline">offline</div>
+      </div>
+    </header>
+
+    <main class="stage">
+      <section class="monitor">
+        <div class="frame">
+          <div class="corners" aria-hidden="true"></div>
+          <div id="drop" class="drop">
+            <input id="file" type="file" accept="video/mp4,video/avi,video/quicktime,video/x-matroska" hidden />
+            <p class="drop-kicker">Drop a clip</p>
+            <p class="drop-copy">MP4, AVI, MOV, or MKV. The GB10 box scores 4-second windows and burns <strong>CRIME</strong> or <strong>NORMAL</strong> onto every frame.</p>
+            <button type="button" id="browse" class="btn">Choose video</button>
+          </div>
+          <video id="player" class="player" controls playsinline hidden></video>
+          <div id="badge" class="badge" hidden>NORMAL</div>
+        </div>
+        <div class="progress-wrap" id="progress-wrap" hidden>
+          <div class="progress-meta">
+            <span id="stage">queued</span>
+            <span id="pct">0%</span>
+          </div>
+          <div class="bar"><div id="bar" class="bar-fill"></div></div>
+        </div>
+      </section>
+
+      <aside class="rail">
+        <section class="card">
+          <h2>Job</h2>
+          <dl class="stats">
+            <div><dt>File</dt><dd id="stat-file">—</dd></div>
+            <div><dt>Status</dt><dd id="stat-status">idle</dd></div>
+            <div><dt>Windows</dt><dd id="stat-windows">—</dd></div>
+            <div><dt>CRIME / NORMAL</dt><dd id="stat-mix">—</dd></div>
+          </dl>
+          <a id="download" class="btn btn-ghost" hidden>Download labelled MP4</a>
+        </section>
+        <section class="card">
+          <h2>Timeline</h2>
+          <p class="hint">Each block is a 4s window (2s stride). Click to seek.</p>
+          <div id="timeline" class="timeline"></div>
+        </section>
+      </aside>
+    </main>
+
+    <p id="error" class="error" hidden></p>
+    <script src="./app.js"></script>
+  </body>
+</html>
