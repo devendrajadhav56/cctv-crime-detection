@@ -1,6 +1,6 @@
 # Scoring backend: "xclip" (zero-shot, prompt-based) or "vadclip" (weakly-
 # supervised, trained on UCF-Crime's 14 anomaly classes — see vadclip below).
-backend: xclip
+backend: vadclip
 
 # Only read when backend: vadclip. checkpoint_path is the CLIPVAD state
 # dict (model_ucf.pth) from the vadclip-ucf-crime reproduction; frames_per_clip
