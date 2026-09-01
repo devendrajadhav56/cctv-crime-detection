@@ -1,4 +1,4 @@
-"""Slide windows over a video and optionally score them with X-CLIP."""
+"""Slide windows over a video and optionally score them with the configured backend."""
 
 from __future__ import annotations
 
@@ -14,7 +14,9 @@ from cctv_crime.config import InferConfig
 from cctv_crime.probe import probe_video
 from cctv_crime.windows import clip_windows
 
-DISPLAY_LABELS = {"fight": "CRIME", "normal": "NORMAL"}
+# X-CLIP's binary label kept its established display word; every other label
+# (VadCLIP's specific classes, "normal") just uppercases.
+DISPLAY_LABELS = {"fight": "CRIME"}
 
 
 @dataclass(frozen=True)
@@ -24,7 +26,6 @@ class WindowResult:
     label: str | None
     confidence: float | None
     probabilities: dict[str, float] = field(default_factory=dict)
-    top_class: str | None = None
 
     @property
     def display_label(self) -> str | None:
@@ -40,7 +41,6 @@ class WindowResult:
             "display_label": self.display_label,
             "confidence": None if self.confidence is None else round(self.confidence, 4),
             "probabilities": {key: round(value, 4) for key, value in self.probabilities.items()},
-            "top_class": self.top_class,
         }
 
 
@@ -106,7 +106,6 @@ def infer_video(
                 label=prediction.label,
                 confidence=prediction.confidence,
                 probabilities=dict(prediction.probabilities),
-                top_class=prediction.top_class,
             )
         )
         if progress_callback is not None:

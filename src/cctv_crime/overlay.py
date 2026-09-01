@@ -1,4 +1,4 @@
-"""Burn CRIME / NORMAL labels onto a video from sliding-window scores."""
+"""Burn the predicted class (or NORMAL) onto a video from sliding-window scores."""
 
 from __future__ import annotations
 
@@ -18,24 +18,25 @@ NORMAL_BGR = (170, 210, 90)
 HUD_BG = (18, 16, 14)
 
 
-def fight_probability(row: WindowResult) -> float:
-    if row.probabilities and "fight" in row.probabilities:
-        return float(row.probabilities["fight"])
-    if row.label == "fight":
-        return float(row.confidence or 0.0)
+def anomaly_score(row: WindowResult) -> float:
+    """Probability this window is anomalous (any non-"normal" label), regardless
+    of which backend or which specific class produced it."""
+    if row.label is None or row.confidence is None:
+        return 0.0
     if row.label == "normal":
-        return 1.0 - float(row.confidence or 0.0)
-    return 0.0
+        return 1.0 - float(row.confidence)
+    return float(row.confidence)
 
 
 def label_at_time(time_sec: float, results: list[WindowResult]) -> tuple[str, float]:
     covering = [row for row in results if row.start_sec <= time_sec < row.end_sec]
     if not covering:
         return "NORMAL", 0.0
-    crime_score = max(fight_probability(row) for row in covering)
-    if crime_score >= 0.5:
-        return "CRIME", crime_score
-    return "NORMAL", 1.0 - crime_score
+    best = max(covering, key=anomaly_score)
+    score = anomaly_score(best)
+    if score >= 0.5:
+        return (best.display_label or best.label or "NORMAL"), score
+    return "NORMAL", 1.0 - score
 
 
 def _scale(width: int, height: int) -> float:
@@ -46,8 +47,8 @@ def draw_hud(frame: np.ndarray, display_label: str, confidence: float, time_sec:
     out = frame.copy()
     height, width = out.shape[:2]
     scale = _scale(width, height)
-    is_crime = display_label == "CRIME"
-    accent = CRIME_BGR if is_crime else NORMAL_BGR
+    is_anomaly = display_label != "NORMAL"
+    accent = CRIME_BGR if is_anomaly else NORMAL_BGR
 
     thickness = max(int(round(4 * scale)), 2)
     cv2.rectangle(out, (0, 0), (width - 1, height - 1), accent, thickness)

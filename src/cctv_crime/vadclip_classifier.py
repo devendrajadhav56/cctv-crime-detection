@@ -7,6 +7,12 @@ window's VadCLIP "snippet" sequence, zero-padded up to the model's fixed
 256-slot buffer, and the per-snippet anomaly scores are max-pooled into a
 single window-level score — matching the top-k pooling used in the
 model's own training loss (CLAS2).
+
+Two-stage output, mirroring the model's own dual-branch design: the CLAS2
+branch (logits1) decides whether the window is anomalous at all; if so,
+the CLASM/alignment branch (logits2) names which of the 13 non-Normal
+UCF-Crime classes it looks like. The full 14-class distribution is always
+returned in `probabilities`, not just the winning label.
 """
 
 from __future__ import annotations
@@ -92,17 +98,29 @@ class VadClipClassifier:
 
             _, logits1, logits2 = self.model(visual, padding_mask, self.prompt_text, lengths)
 
+            # Anomaly presence + confidence: CLAS2 branch (logits1), the
+            # primary branch — same threshold/shape as before.
             anomaly_probs = torch.sigmoid(logits1[0, :n, 0])
             score = float(anomaly_probs.max().item())
 
+            # Which class: CLASM/alignment branch (logits2), VadCLIP's
+            # fine-grained branch — full 14-way distribution, exposed as-is.
             class_probs = torch.softmax(logits2[0, :n], dim=-1).mean(dim=0)
-            top_class = CLASS_LABELS[int(class_probs.argmax().item())]
+            probabilities = {
+                label.lower(): float(prob) for label, prob in zip(CLASS_LABELS, class_probs.tolist())
+            }
 
-        label = "fight" if score >= 0.5 else "normal"
-        confidence = max(score, 1.0 - score)
+        if score >= 0.5:
+            # Anomalous: name it via the alignment branch, restricted to the
+            # 13 non-Normal classes (index 0 is "Normal").
+            non_normal = class_probs[1:]
+            label = CLASS_LABELS[1 + int(non_normal.argmax().item())].lower()
+        else:
+            label = "normal"
+        confidence = score if label != "normal" else 1.0 - score
+
         return ClipPrediction(
             label=label,
             confidence=confidence,
-            probabilities={"fight": score, "normal": 1.0 - score},
-            top_class=top_class,
+            probabilities=probabilities,
         )

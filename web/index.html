@@ -38,7 +38,7 @@
           <div id="drop" class="drop">
             <input id="file" type="file" accept="video/mp4,video/avi,video/quicktime,video/x-matroska" hidden />
             <p class="drop-kicker">Drop a clip</p>
-            <p class="drop-copy">MP4, AVI, MOV, or MKV. The GB10 box scores 4-second windows and burns <strong>CRIME</strong> or <strong>NORMAL</strong> onto every frame.</p>
+            <p class="drop-copy">MP4, AVI, MOV, or MKV. The GB10 box scores 4-second windows and burns the predicted class (e.g. <strong>SHOOTING</strong>) or <strong>NORMAL</strong> onto every frame.</p>
             <button type="button" id="browse" class="btn">Choose video</button>
           </div>
           <video id="player" class="player" controls playsinline hidden></video>
@@ -60,8 +60,9 @@
             <div><dt>File</dt><dd id="stat-file">—</dd></div>
             <div><dt>Status</dt><dd id="stat-status">idle</dd></div>
             <div><dt>Windows</dt><dd id="stat-windows">—</dd></div>
-            <div><dt>CRIME / NORMAL</dt><dd id="stat-mix">—</dd></div>
+            <div><dt>Anomalous / Normal</dt><dd id="stat-mix">—</dd></div>
           </dl>
+          <p class="hint" id="stat-classes"></p>
           <a id="download" class="btn btn-ghost" hidden>Download labelled MP4</a>
         </section>
         <section class="card">

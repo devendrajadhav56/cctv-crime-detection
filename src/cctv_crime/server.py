@@ -68,20 +68,26 @@ class JobStore:
         }
 
 
+DEMO_CLASSES = ("fighting", "shooting", "robbery", "vandalism")
+
+
 def demo_window_results(windows: list[tuple[float, float]]) -> list[WindowResult]:
-    """Visible CRIME/NORMAL alternation so the UI can be tested without a GPU."""
+    """Visible NORMAL / specific-class alternation so the UI can be tested without a GPU."""
     results: list[WindowResult] = []
-    for start, end in windows:
-        is_crime = int(start) % 16 >= 8
-        fight_p = 0.86 if is_crime else 0.14
-        label = "fight" if is_crime else "normal"
+    for index, (start, end) in enumerate(windows):
+        is_anomaly = int(start) % 16 >= 8
+        score = 0.86
+        label = DEMO_CLASSES[index % len(DEMO_CLASSES)] if is_anomaly else "normal"
+        probabilities = {cls: 0.0 for cls in DEMO_CLASSES}
+        probabilities["normal"] = 1.0 - score if is_anomaly else score
+        probabilities[label] = score
         results.append(
             WindowResult(
                 start_sec=start,
                 end_sec=end,
                 label=label,
-                confidence=max(fight_p, 1.0 - fight_p),
-                probabilities={"fight": fight_p, "normal": 1.0 - fight_p},
+                confidence=score,
+                probabilities=probabilities,
             )
         )
     return results

@@ -19,6 +19,7 @@ const els = {
   statStatus: document.getElementById("stat-status"),
   statWindows: document.getElementById("stat-windows"),
   statMix: document.getElementById("stat-mix"),
+  statClasses: document.getElementById("stat-classes"),
 };
 
 let windows = [];
@@ -74,14 +75,32 @@ function formatTime(seconds) {
   return `${minutes}:${secs}`;
 }
 
+// Probability this window is anomalous (any non-"normal" label), regardless
+// of which backend or which specific class produced it.
+function anomalyScore(row) {
+  if (row.label == null || row.confidence == null) return 0;
+  return row.label === "normal" ? 1 - row.confidence : row.confidence;
+}
+
 function displayAt(timeSec) {
   const covering = windows.filter((row) => timeSec >= row.start_sec && timeSec < row.end_sec);
   if (!covering.length) return { label: "NORMAL", score: 0 };
-  const crime = Math.max(
-    ...covering.map((row) => (row.probabilities && row.probabilities.fight) || (row.label === "fight" ? row.confidence : 0)),
-  );
-  if (crime >= 0.5) return { label: "CRIME", score: crime };
-  return { label: "NORMAL", score: 1 - crime };
+  const best = covering.reduce((a, b) => (anomalyScore(b) > anomalyScore(a) ? b : a));
+  const score = anomalyScore(best);
+  if (score >= 0.5) return { label: best.display_label || best.label, score };
+  return { label: "NORMAL", score: 1 - score };
+}
+
+function classBreakdown(rows) {
+  const counts = new Map();
+  rows.forEach((row) => {
+    const key = row.label || "?";
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => `${label} ×${count}`)
+    .join(" · ");
 }
 
 function renderTimeline(rows) {
@@ -89,7 +108,7 @@ function renderTimeline(rows) {
   rows.forEach((row) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `seg ${row.display_label === "CRIME" || row.label === "fight" ? "crime" : "normal"}`;
+    button.className = `seg ${row.label !== "normal" ? "crime" : "normal"}`;
     button.title = `${formatTime(row.start_sec)}–${formatTime(row.end_sec)} ${row.display_label || row.label}`;
     button.addEventListener("click", () => {
       els.player.currentTime = row.start_sec + 0.05;
@@ -104,7 +123,7 @@ function updateBadge() {
   const { label } = displayAt(els.player.currentTime);
   els.badge.hidden = false;
   els.badge.textContent = label;
-  els.badge.classList.toggle("crime", label === "CRIME");
+  els.badge.classList.toggle("crime", label !== "NORMAL");
   els.badge.classList.toggle("normal", label === "NORMAL");
   const segs = [...els.timeline.children];
   segs.forEach((el, index) => {
@@ -135,8 +154,9 @@ async function pollJob(jobId) {
   }
   windows = job.windows || [];
   els.statWindows.textContent = String(windows.length);
-  const crime = windows.filter((row) => row.display_label === "CRIME" || row.label === "fight").length;
-  els.statMix.textContent = `${crime} / ${windows.length - crime}`;
+  const anomalous = windows.filter((row) => row.label !== "normal").length;
+  els.statMix.textContent = `${anomalous} / ${windows.length - anomalous}`;
+  els.statClasses.textContent = classBreakdown(windows);
   renderTimeline(windows);
 
   if (objectUrl) URL.revokeObjectURL(objectUrl);

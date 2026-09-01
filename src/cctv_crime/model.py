@@ -17,7 +17,6 @@ class ClipPrediction:
     label: str
     confidence: float
     probabilities: dict[str, float]
-    top_class: str | None = None
 
 
 class ZeroShotClipClassifier:
